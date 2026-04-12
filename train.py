@@ -183,7 +183,7 @@ def train_localization(args, device, train_loader, val_loader):
                 l_reg = criterion_reg(outputs, bboxes)
                 l_iou = criterion_iou(outputs, bboxes)
                 val_loss += (l_reg + (10.0 * l_iou)).item()
-
+                val_iou_loss += l_iou.item() 
         val_loss /= len(val_loader)
         avg_val_iou = 1.0 - (val_iou_loss / len(val_loader))
 
