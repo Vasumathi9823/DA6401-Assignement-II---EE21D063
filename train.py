@@ -92,6 +92,10 @@ def train_classifier(args, device, train_loader, val_loader):
             outputs = model(images)
             loss = criterion(outputs, labels)
             loss.backward()
+            
+            # --- NEW: Gradient Clipping ---
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
             optimizer.step()
             train_loss += loss.item()
 
@@ -161,6 +165,10 @@ def train_localization(args, device, train_loader, val_loader):
             
             loss = criterion_mse(outputs, bboxes) + criterion_iou(outputs, bboxes)
             loss.backward()
+
+            # --- NEW: Gradient Clipping ---
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
             optimizer.step()
             train_loss += loss.item()
 
@@ -225,6 +233,10 @@ def train_segmentation(args, device, train_loader, val_loader):
             outputs = model(images)
             loss = criterion(outputs, masks)
             loss.backward()
+
+            # --- NEW: Gradient Clipping ---
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
             optimizer.step()
             train_loss += loss.item()
 
