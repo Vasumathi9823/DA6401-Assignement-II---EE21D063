@@ -1,4 +1,4 @@
-"""Loss package exports for Assignment-2 skeleton."""
+"""Loss package exports."""
 
 from .iou_loss import IoULoss
 
