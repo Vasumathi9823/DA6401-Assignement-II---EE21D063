@@ -14,16 +14,16 @@ class VGG11Localizer(nn.Module):
         
         self.encoder = VGG11Encoder(in_channels)
         
-        # Regression head for bounding box prediction
+        # TA APPROVED SHRUNK FC LAYERS for Regression
         self.regressor = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
+            nn.Linear(512 * 7 * 7, 512),
             nn.ReLU(inplace=True),
             CustomDropout(p=dropout_p),
-            nn.Linear(4096, 4096),
+            nn.Linear(512, 128),
             nn.ReLU(inplace=True),
             CustomDropout(p=dropout_p),
-            # Final output is exactly 4 continuous values
-            nn.Linear(4096, 4) 
+            # Final output is exactly 4 continuous values [cx, cy, w, h]
+            nn.Linear(128, 4) 
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
