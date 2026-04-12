@@ -183,7 +183,9 @@ def train_segmentation(args, device, train_loader, val_loader):
         train_loss = 0.0
 
         for batch in train_loader:
-            images, masks = batch['image'].to(device), batch['mask'].to(device)
+            # FIX: Explicitly cast masks to torch.long right here
+            images, masks = batch['image'].to(device), batch['mask'].to(device, dtype=torch.long)
+            
             optimizer.zero_grad()
             outputs = model(images)
             loss = criterion(outputs, masks)
@@ -197,7 +199,9 @@ def train_segmentation(args, device, train_loader, val_loader):
         val_loss, dice_score = 0.0, 0.0
         with torch.no_grad():
             for batch in val_loader:
-                images, masks = batch['image'].to(device), batch['mask'].to(device)
+                # FIX: Explicitly cast masks to torch.long in validation too
+                images, masks = batch['image'].to(device), batch['mask'].to(device, dtype=torch.long)
+                
                 outputs = model(images)
                 loss = criterion(outputs, masks)
                 val_loss += loss.item()
