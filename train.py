@@ -27,14 +27,22 @@ def get_activation(name):
     return hook
 
 # 1. Parameter Tuning: Kaiming Initialization for Deep ReLU Networks
+# 1. Parameter Tuning: Split Initialization for Deep Networks
 def init_weights(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+    """Applies Kaiming to Conv layers, but gentle Normal init to Linear layers."""
+    if isinstance(m, nn.Conv2d):
+        # Kaiming is perfect for Conv layers
         nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
     elif isinstance(m, nn.BatchNorm2d):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
+    elif isinstance(m, nn.Linear):
+        # FIX: Gentle initialization for Linear layers to prevent logit explosion
+        nn.init.normal_(m.weight, 0, 0.01)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
 
 # 2. Safe Augmentations (No aggressive cropping to protect bounding boxes)
 def get_dataloaders(root_dir: str, batch_size: int = 32):
