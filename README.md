@@ -2,7 +2,7 @@
 
 This repository is an instructional skeleton for building the complete visual perception pipeline on Oxford-IIIT Pet.
 
-Link to GitHub repo: 
+Link to GitHub repo: https://github.com/Vasumathi9823/DA6401-Assignement-II---EE21D063/tree/main
 ### ADDITIONAL INSTRUCTIONS FOR ASSIGNMENT2:
 - Ensure VGG11 is implemented according to the official paper(https://arxiv.org/abs/1409.1556). The only difference being injecting BatchNorm and CustomDropout layers is your design choice.
 - Train all the networks on normalized images as input (as the test set given by autograder will be normalized images).
