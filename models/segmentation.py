@@ -25,30 +25,29 @@ class VGG11UNet(nn.Module):
             )
 
         # Transposed Convolutions and Decoder Blocks
-        # The channel size doubles due to concatenation with the encoder skip connections
+        # Adjusted input channels to perfectly match VGG11 feature map concatenations
         self.up5 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
-        self.dec5 = dec_block(1024, 512) 
+        self.dec5 = dec_block(1024, 512) # 512 (up) + 512 (pool5_pre)
         
         self.up4 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
-        self.dec4 = dec_block(512, 256) 
+        self.dec4 = dec_block(768, 256)  # 256 (up) + 512 (pool4_pre)
         
         self.up3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-        self.dec3 = dec_block(256, 128) 
+        self.dec3 = dec_block(384, 128)  # 128 (up) + 256 (pool3_pre)
         
         self.up2 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-        self.dec2 = dec_block(128, 64) 
+        self.dec2 = dec_block(192, 64)   # 64 (up) + 128 (pool2_pre)
         
         self.up1 = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2)
-        self.dec1 = dec_block(128, 64) 
+        self.dec1 = dec_block(128, 64)   # 64 (up) + 64 (pool1_pre)
         
-        # Final 1x1 Convolution to map to the number of classes
+        # Final 1x1 Convolution
         self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass for segmentation model."""
         bottleneck, features = self.encoder(x, return_features=True)
         
-        # Expansive Path (Decoding)
         d5 = self.up5(bottleneck)
         d5 = torch.cat([d5, features['pool5_pre']], dim=1)
         d5 = self.dec5(d5)
