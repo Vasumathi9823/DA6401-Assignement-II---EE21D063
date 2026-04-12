@@ -19,9 +19,9 @@ class MultiTaskPerceptionModel(nn.Module):
         super().__init__()
         
         import gdown
-        gdown.download(id="<classifier.pth drive id>", output=classifier_path, quiet=False)
-        gdown.download(id="<localizer.pth drive id>", output=localizer_path, quiet=False)
-        gdown.download(id="<unet.pth drive id>", output=unet_path, quiet=False)
+        gdown.download(id="1NQU7m0YS5cPkGfm9J1sdOGGsjbkvU5C1", output=classifier_path, quiet=False)
+        gdown.download(id="1Iglso8WczzJGmbSuod8xivhraXFN5i-d", output=localizer_path, quiet=False)
+        gdown.download(id="1N-FHY7BwzBh4Vw1n4TRQzZPD0nBFRxeW", output=unet_path, quiet=False)
         
         # Shared Encoder
         self.shared_encoder = VGG11Encoder(in_channels)
