@@ -8,13 +8,11 @@ from .layers import CustomDropout
 class VGG11Classifier(nn.Module):
     """Full classifier = VGG11Encoder + ClassificationHead."""
 
-    def __init__(self, num_classes: int = 37, in_channels: int = 3, dropout_p: float = 0.5):
-        """
-        Initialize the VGG11Classifier model.
-        """
+    def __init__(self, num_classes: int = 37, in_channels: int = 3, dropout_p: float = 0.5, use_bn: bool = True):
+        """Initialize the VGG11Classifier model."""
         super().__init__()
         
-        self.encoder = VGG11Encoder(in_channels)
+        self.encoder = VGG11Encoder(in_channels, use_bn=use_bn)
         
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
@@ -28,12 +26,7 @@ class VGG11Classifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass for classification model."""
-        # Extract features from the backbone
         x = self.encoder(x, return_features=False)
-        
-        # Flatten spatial dimensions
         x = torch.flatten(x, 1)
-        
-        # Pass through linear classification head
         x = self.classifier(x)
         return x
