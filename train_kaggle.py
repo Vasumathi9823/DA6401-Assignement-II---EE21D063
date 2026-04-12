@@ -236,7 +236,7 @@ def str2bool(v):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, default="classification", choices=["classification", "localization", "segmentation"])
-    parser.add_argument("--data_dir", type=str, default="//kaggle/working/oxford-iiit-pet") 
+    parser.add_argument("--data_dir", type=str, default="/kaggle/working/oxford-iiit-pet") 
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--epochs", type=int, default=20)
