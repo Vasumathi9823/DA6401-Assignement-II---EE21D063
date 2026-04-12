@@ -78,8 +78,7 @@ def train_classifier(args, device, train_loader, val_loader):
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5, verbose=True)
-
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
     best_f1 = 0.0
     epochs_no_improve = 0
 
@@ -147,8 +146,7 @@ def train_localization(args, device, train_loader, val_loader):
     criterion_mse = nn.MSELoss()
     criterion_iou = IoULoss(reduction="mean")
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5, verbose=True)
-
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
     best_iou = 0.0
     epochs_no_improve = 0
 
@@ -212,7 +210,7 @@ def train_segmentation(args, device, train_loader, val_loader):
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
 
     best_dice = 0.0
     epochs_no_improve = 0
