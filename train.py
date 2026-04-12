@@ -26,8 +26,6 @@ def get_activation(name):
         activation_cache[name] = output.detach()
     return hook
 
-# 1. Parameter Tuning: Kaiming Initialization for Deep ReLU Networks
-# 1. Parameter Tuning: Split Initialization for Deep Networks
 def init_weights(m):
     """Applies Kaiming to Conv layers, but gentle Normal init to Linear layers."""
     if isinstance(m, nn.Conv2d):
@@ -39,12 +37,10 @@ def init_weights(m):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
     elif isinstance(m, nn.Linear):
-        # FIX: Gentle initialization for Linear layers to prevent logit explosion
         nn.init.normal_(m.weight, 0, 0.01)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
 
-# 2. Safe Augmentations (No aggressive cropping to protect bounding boxes)
 def get_dataloaders(root_dir: str, batch_size: int = 32):
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
@@ -71,9 +67,7 @@ def get_dataloaders(root_dir: str, batch_size: int = 32):
 
     return train_loader, val_loader
 
-# ==========================================
-# TASK 1: CLASSIFICATION
-# ==========================================
+# CLASSIFICATION
 def train_classifier(args, device, train_loader, val_loader):
     run_name = f"scratch_classifier_bn_{args.use_bn}_drop_{args.dropout}"
     wandb.init(project="DA6401_Assignment II", name=run_name, config=vars(args))
@@ -85,7 +79,6 @@ def train_classifier(args, device, train_loader, val_loader):
     target_layer.register_forward_hook(get_activation('conv3_activations'))
     
     criterion = nn.CrossEntropyLoss()
-    # Insert this line
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
     best_f1 = 0.0
@@ -102,7 +95,6 @@ def train_classifier(args, device, train_loader, val_loader):
             loss = criterion(outputs, labels)
             loss.backward()
             
-            # --- NEW: Gradient Clipping ---
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             
             optimizer.step()
@@ -147,18 +139,15 @@ def train_classifier(args, device, train_loader, val_loader):
 
     wandb.finish()
 
-# ==========================================
-# TASK 2: LOCALIZATION
-# ==========================================
+# LOCALIZATION 
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task2_localization", config=vars(args))
 
     model = VGG11Localizer(in_channels=3, dropout_p=args.dropout).to(device)
     model.apply(init_weights) # Initialize from scratch optimally
     
-    criterion_mse = nn.MSELoss()
+    criterion_reg = nn.SmoothL1Loss() 
     criterion_iou = IoULoss(reduction="mean")
-    # Insert this line
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
     best_iou = 0.0
@@ -173,7 +162,7 @@ def train_localization(args, device, train_loader, val_loader):
             optimizer.zero_grad()
             outputs = model(images)
             
-            loss = criterion_mse(outputs, bboxes) + criterion_iou(outputs, bboxes)
+            loss = criterion_reg(outputs, bboxes) + (10.0 * criterion_iou(outputs, bboxes))
             loss.backward()
 
             # --- NEW: Gradient Clipping ---
@@ -191,10 +180,9 @@ def train_localization(args, device, train_loader, val_loader):
                 images, bboxes = batch['image'].to(device), batch['bbox'].to(device)
                 outputs = model(images)
                 
-                l_mse = criterion_mse(outputs, bboxes)
+                l_reg = criterion_reg(outputs, bboxes)
                 l_iou = criterion_iou(outputs, bboxes)
-                val_loss += (l_mse + l_iou).item()
-                val_iou_loss += l_iou.item()
+                val_loss += (l_reg + (10.0 * l_iou)).item()
 
         val_loss /= len(val_loader)
         avg_val_iou = 1.0 - (val_iou_loss / len(val_loader))
@@ -217,9 +205,7 @@ def train_localization(args, device, train_loader, val_loader):
 
     wandb.finish()
 
-# ==========================================
-# TASK 3: SEGMENTATION
-# ==========================================
+# SEGMENTATION
 def train_segmentation(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task3_segmentation", config=vars(args))
 
@@ -227,7 +213,6 @@ def train_segmentation(args, device, train_loader, val_loader):
     model.apply(init_weights) # Initialize from scratch optimally
     
     criterion = nn.CrossEntropyLoss()
-    # Insert this line
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
 
