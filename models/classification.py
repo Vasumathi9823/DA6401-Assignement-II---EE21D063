@@ -14,14 +14,16 @@ class VGG11Classifier(nn.Module):
         
         self.encoder = VGG11Encoder(in_channels, use_bn=use_bn)
         
+        # TA APPROVED SHRUNK FC LAYERS
+        # Reduced from 4096 to prevent massive overfitting
         self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
+            nn.Linear(512 * 7 * 7, 512),
             nn.ReLU(inplace=True),
             CustomDropout(p=dropout_p),
-            nn.Linear(4096, 4096),
+            nn.Linear(512, 128),
             nn.ReLU(inplace=True),
             CustomDropout(p=dropout_p),
-            nn.Linear(4096, num_classes)
+            nn.Linear(128, num_classes)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
