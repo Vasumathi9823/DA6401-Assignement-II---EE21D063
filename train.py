@@ -62,6 +62,26 @@ def cxcywh_to_voc(bboxes):
     cx, cy, w, h = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
     return torch.stack([cx - (w / 2.0), cy - (h / 2.0), cx + (w / 2.0), cy + (h / 2.0)], dim=1)
 
+def draw_bboxes_wandb(images, pred_boxes, target_boxes, ious):
+    """Helper for Section 2.5: Log images with bounding boxes to W&B"""
+    wandb_images = []
+    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).to(images.device)
+    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1).to(images.device)
+    
+    for i in range(min(10, images.size(0))):
+        img = images[i] * std + mean
+        img = torch.clamp(img, 0, 1).cpu().numpy().transpose(1, 2, 0)
+        
+        p_x1, p_y1, p_x2, p_y2 = pred_boxes[i].cpu().numpy()
+        t_x1, t_y1, t_x2, t_y2 = target_boxes[i].cpu().numpy()
+        iou_val = ious[i].item()
+        
+        wandb_images.append(wandb.Image(img, boxes={
+            "predictions": {"box_data": [{"position": {"minX": p_x1, "minY": p_y1, "maxX": p_x2, "maxY": p_y2}, "class_id": 1, "domain": "pixel"}], "class_labels": {1: f"Pred IoU:{iou_val:.2f}"}},
+            "ground_truth": {"box_data": [{"position": {"minX": t_x1, "minY": t_y1, "maxX": t_x2, "maxY": t_y2}, "class_id": 2, "domain": "pixel"}], "class_labels": {2: "Target"}}
+        }))
+    return wandb_images
+
 # === TASK 1: CLASSIFICATION ===
 def train_classifier(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name=f"classifier_bn_{args.use_bn}_drop_{args.dropout}", config=vars(args))
@@ -117,7 +137,7 @@ def train_localization(args, device, train_loader, val_loader):
     model = VGG11Localizer(in_channels=3).to(device)
     model.apply(init_weights) 
     
-    criterion_reg = nn.SmoothL1Loss(); criterion_iou = IoULoss(reduction="mean")
+    criterion_reg = nn.SmoothL1Loss(); criterion_iou = IoULoss(reduction="none")
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
     best_iou = 0.0; epochs_no_improve = 0
@@ -133,7 +153,7 @@ def train_localization(args, device, train_loader, val_loader):
             outputs_cxcywh = model(images)
             outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
             
-            loss = criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * criterion_iou(outputs_xyxy, bboxes_xyxy))
+            loss = criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * criterion_iou(outputs_xyxy, bboxes_xyxy).mean())
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -141,7 +161,7 @@ def train_localization(args, device, train_loader, val_loader):
 
         model.eval(); val_loss, val_iou_loss = 0.0, 0.0
         with torch.no_grad():
-            for batch in val_loader:
+            for batch_idx, batch in enumerate(val_loader):
                 images = batch['image'].to(device)
                 bboxes_xyxy = batch['bbox'].to(device)
                 bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
@@ -149,10 +169,16 @@ def train_localization(args, device, train_loader, val_loader):
                 outputs_cxcywh = model(images)
                 outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
                 
-                l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy)
+                l_iou_batch = criterion_iou(outputs_xyxy, bboxes_xyxy)
+                l_iou = l_iou_batch.mean()
                 val_loss += (criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * l_iou)).item()
                 val_iou_loss += l_iou.item()
-                
+
+                # W&B SECTION 2.5: Log 10 Bounding Box images on the first batch of validation
+                if batch_idx == 0:
+                    ious_scores = 1.0 - l_iou_batch
+                    wandb.log({"Localization_Edge_Cases": draw_bboxes_wandb(images, outputs_xyxy, bboxes_xyxy, ious_scores)}, commit=False)
+
         avg_val_iou = 1.0 - (val_iou_loss / len(val_loader))
         scheduler.step(avg_val_iou)
         wandb.log({"epoch": epoch, "train_loss": train_loss/len(train_loader), "val_loss": val_loss/len(val_loader), "val_iou": avg_val_iou})
@@ -172,13 +198,13 @@ def train_segmentation(args, device, train_loader, val_loader):
     model = VGG11UNet(num_classes=3, in_channels=3, dropout_p=args.dropout).to(device)
     model.apply(init_weights)
 
-    # ADDED FOR W&B 2.3: Transfer Learning Freeze Modes
+    # W&B SECTION 2.3: Transfer Learning Freeze Modes
     if args.freeze_mode == "frozen":
         for param in model.encoder.parameters():
             param.requires_grad = False
     elif args.freeze_mode == "partial":
         for name, param in model.encoder.named_parameters():
-            if "block5" not in name: # Unfreeze only the last block
+            if "block5" not in name: 
                 param.requires_grad = False
     
     class_weights = torch.tensor([1.0, 0.2, 1.0]).to(device)
@@ -207,7 +233,7 @@ def train_segmentation(args, device, train_loader, val_loader):
 
                 preds = torch.argmax(outputs, dim=1)
                 
-                # ADDED FOR W&B 2.6: Pixel Accuracy Calculation
+                # W&B SECTION 2.6: Pixel Accuracy Calculation
                 pixel_acc += (preds == masks).sum().float().item() / masks.numel()
 
                 for c in range(3):
@@ -246,7 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--dropout", type=float, default=0.5)
     parser.add_argument("--use_bn", type=str2bool, nargs='?', const=True, default=True)
-    parser.add_argument("--freeze_mode", type=str, default="none", choices=["none", "frozen", "partial"]) # For W&B Section 2.3
+    parser.add_argument("--freeze_mode", type=str, default="none", choices=["none", "frozen", "partial"])
 
     args = parser.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
