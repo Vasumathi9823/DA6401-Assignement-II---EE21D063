@@ -138,7 +138,16 @@ def train_classifier(args, device, train_loader, val_loader):
             break
 
     wandb.finish()
-
+    
+def voc_to_cxcywh(bboxes):
+    """Converts [x1, y1, x2, y2] to [cx, cy, w, h]"""
+    x1, y1, x2, y2 = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
+    cx = (x1 + x2) / 2.0
+    cy = (y1 + y2) / 2.0
+    w = x2 - x1
+    h = y2 - y1
+    return torch.stack([cx, cy, w, h], dim=1)
+    
 # LOCALIZATION 
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task2_localization", config=vars(args))
@@ -159,6 +168,10 @@ def train_localization(args, device, train_loader, val_loader):
 
         for batch in train_loader:
             images, bboxes = batch['image'].to(device), batch['bbox'].to(device)
+            
+            # --- NEW: Convert coordinates so IoULoss calculates correctly ---
+            bboxes = voc_to_cxcywh(bboxes)
+            
             optimizer.zero_grad()
             outputs = model(images)
             
@@ -178,12 +191,16 @@ def train_localization(args, device, train_loader, val_loader):
         with torch.no_grad():
             for batch in val_loader:
                 images, bboxes = batch['image'].to(device), batch['bbox'].to(device)
+                
+                # --- NEW: Convert validation coordinates too! ---
+                bboxes = voc_to_cxcywh(bboxes)
+                
                 outputs = model(images)
                 
                 l_reg = criterion_reg(outputs, bboxes)
                 l_iou = criterion_iou(outputs, bboxes)
                 val_loss += (l_reg + (10.0 * l_iou)).item()
-                val_iou_loss += l_iou.item() 
+                val_iou_loss += l_iou.item()
         val_loss /= len(val_loader)
         avg_val_iou = 1.0 - (val_iou_loss / len(val_loader))
 
