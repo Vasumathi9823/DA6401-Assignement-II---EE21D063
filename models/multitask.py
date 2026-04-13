@@ -17,12 +17,14 @@ class MultiTaskPerceptionModel(nn.Module):
                  unet_path: str = "unet.pth"):
         """Initialize the shared backbone/heads using trained weights."""
         super().__init__()
-        #https://drive.google.com/file/d/1484W3kYuCSE3MjaWNCDNuE3Uv-m86r2A/view?usp=sharing
-        # https://drive.google.com/file/d/1vd_kGzY756h6Yp3mL0HmcAPudAReCZA-/view?usp=sharing
+        #https://drive.google.com/file/d/1QYn6W2AEeJ316b9cxf7hvhX8CXuK_Hzg/view?usp=sharing
+        #https://drive.google.com/file/d/1qHJAEFyrXF8ochAfRCyavVL7sNVVzAtE/view?usp=sharing
+                     #https://drive.google.com/file/d/1HOfRw2GL8t0S1DEFyNuKUfYvGMWpJdUg/view?usp=sharing
+                     #1484W3kYuCSE3MjaWNCDNuE3Uv-m86r2A
         import gdown
-        gdown.download(id="1484W3kYuCSE3MjaWNCDNuE3Uv-m86r2A", output=classifier_path, quiet=False)
-        gdown.download(id="1Iglso8WczzJGmbSuod8xivhraXFN5i-d", output=localizer_path, quiet=False)
-        gdown.download(id="1vd_kGzY756h6Yp3mL0HmcAPudAReCZA-", output=unet_path, quiet=False)
+        gdown.download(id="1QYn6W2AEeJ316b9cxf7hvhX8CXuK_Hzg", output=classifier_path, quiet=False)
+        gdown.download(id="1qHJAEFyrXF8ochAfRCyavVL7sNVVzAtE", output=localizer_path, quiet=False)
+        gdown.download(id="1HOfRw2GL8t0S1DEFyNuKUfYvGMWpJdUg", output=unet_path, quiet=False)
         
         # Shared Encoder
         self.shared_encoder = VGG11Encoder(in_channels)
