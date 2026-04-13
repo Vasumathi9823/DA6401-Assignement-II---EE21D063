@@ -22,7 +22,6 @@ class MultiTaskPerceptionModel(nn.Module):
         self.classifier_head = dummy_classifier.classifier
         self.localizer_head = dummy_localizer.regressor
         
-        # Safe, offline loading for Gradescope
         try:
             if os.path.exists(classifier_path):
                 c_weights = torch.load(classifier_path, map_location="cpu")
