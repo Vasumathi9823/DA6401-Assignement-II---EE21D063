@@ -13,13 +13,11 @@ class VGG11Localizer(nn.Module):
         
         self.encoder = VGG11Encoder(in_channels)
         
-        # TA APPROVED SHRUNK FC LAYERS - NO DROPOUT for precise regression
         self.regressor = nn.Sequential(
             nn.Linear(512 * 7 * 7, 512),
             nn.ReLU(inplace=True),
             nn.Linear(512, 128),
             nn.ReLU(inplace=True),
-            # Final output is exactly 4 continuous values [cx, cy, w, h]
             nn.Linear(128, 4) 
         )
 
@@ -29,5 +27,4 @@ class VGG11Localizer(nn.Module):
         x = torch.flatten(x, 1)
         x = self.regressor(x)
         
-        # FIX: Force outputs to be strictly between 0.0 and 1.0
         return torch.sigmoid(x)
