@@ -162,13 +162,12 @@ def train_classifier(args, device, train_loader, val_loader):
     wandb.finish()
 
 
-# ==========================================
-# TASK 2: LOCALIZATION
-# ==========================================
+
+# LOCALIZATION
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task2_localization", config=vars(args))
 
-    model = VGG11Localizer(in_channels=3, dropout_p=args.dropout).to(device)
+    model = VGG11Localizer(in_channels=3).to(device)
     model.apply(init_weights) 
     
     criterion_reg = nn.SmoothL1Loss() 
@@ -183,22 +182,21 @@ def train_localization(args, device, train_loader, val_loader):
         train_loss = 0.0
 
         for batch in train_loader:
-            images, bboxes_xyxy = batch['image'].to(device), batch['bbox'].to(device)
+            images = batch['image'].to(device)
+            # FIX: Normalize targets to [0.0, 1.0] by dividing by image size
+            bboxes_xyxy = batch['bbox'].to(device) / 224.0
             
-            # Format target for regression
             bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
             
             optimizer.zero_grad()
             outputs_cxcywh = model(images)
-            
-            # Convert predictions back to xyxy JUST for the IoU loss calculation
             outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
             
-            # Calculate dual losses
+            # Both losses are now naturally on the same [0, 1] scale!
             l_reg = criterion_reg(outputs_cxcywh, bboxes_cxcywh)
             l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy) 
             
-            loss = l_reg + (10.0 * l_iou)
+            loss = l_reg + l_iou
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -211,7 +209,9 @@ def train_localization(args, device, train_loader, val_loader):
         val_loss, val_iou_loss = 0.0, 0.0
         with torch.no_grad():
             for batch in val_loader:
-                images, bboxes_xyxy = batch['image'].to(device), batch['bbox'].to(device)
+                images = batch['image'].to(device)
+                # FIX: Normalize validation targets too
+                bboxes_xyxy = batch['bbox'].to(device) / 224.0
                 
                 bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
                 outputs_cxcywh = model(images)
@@ -220,7 +220,7 @@ def train_localization(args, device, train_loader, val_loader):
                 l_reg = criterion_reg(outputs_cxcywh, bboxes_cxcywh)
                 l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy)
                 
-                val_loss += (l_reg + (10.0 * l_iou)).item()
+                val_loss += (l_reg + l_iou).item()
                 val_iou_loss += l_iou.item()
                 
         val_loss /= len(val_loader)
@@ -243,7 +243,6 @@ def train_localization(args, device, train_loader, val_loader):
             break
 
     wandb.finish()
-
 
 # ==========================================
 # TASK 3: SEGMENTATION
