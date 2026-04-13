@@ -201,10 +201,11 @@ def train_localization(args, device, train_loader, val_loader):
 
         model.eval()
         val_loss, val_iou_loss = 0.0, 0.0
-        with torch.no_grad():
+       with torch.no_grad():
             for batch in val_loader:
                 images = batch['image'].to(device)
-                bboxes_xyxy = batch['bbox'].to(device) / 224.0
+                # REMOVE the / 224.0 here too!
+                bboxes_xyxy = batch['bbox'].to(device)
                 
                 bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
                 outputs_cxcywh = model(images)
@@ -213,7 +214,8 @@ def train_localization(args, device, train_loader, val_loader):
                 l_reg = criterion_reg(outputs_cxcywh, bboxes_cxcywh)
                 l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy)
                 
-                val_loss += (l_reg + l_iou).item()
+                # MULTIPLY IoU by 50.0
+                val_loss += (l_reg + (50.0 * l_iou)).item()
                 val_iou_loss += l_iou.item()
                 
         val_loss /= len(val_loader)
