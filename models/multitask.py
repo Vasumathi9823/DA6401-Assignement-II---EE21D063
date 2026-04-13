@@ -8,11 +8,20 @@ from .localization import VGG11Localizer
 from .segmentation import VGG11UNet
 
 class MultiTaskPerceptionModel(nn.Module):
+    """Shared-backbone multi-task model."""
+
     def __init__(self, num_breeds: int = 37, seg_classes: int = 3, in_channels: int = 3, 
                  classifier_path: str = "classifier.pth", 
                  localizer_path: str = "localizer.pth", 
                  unet_path: str = "unet.pth"):
+        """Initialize the shared backbone/heads using trained weights."""
         super().__init__()
+        
+        # Using the TA's exact gdown format with your extracted Drive IDs
+        import gdown
+        gdown.download(id="16MJTJQPXdTv1FJKlU9l-KiqGgRZdfPwP", output=classifier_path, quiet=False)
+        gdown.download(id="1hZsUKQIxvWwmhlvbpfNFfHcuZW8u76Ac", output=localizer_path, quiet=False)
+        gdown.download(id="18LLoiujBfjrT-YW9clt7hmc6_RpJpexp", output=unet_path, quiet=False)
         
         self.shared_encoder = VGG11Encoder(in_channels)
         dummy_classifier = VGG11Classifier(num_breeds, in_channels)
@@ -22,6 +31,7 @@ class MultiTaskPerceptionModel(nn.Module):
         self.classifier_head = dummy_classifier.classifier
         self.localizer_head = dummy_localizer.regressor
         
+        # Load the downloaded weights
         try:
             if os.path.exists(classifier_path):
                 c_weights = torch.load(classifier_path, map_location="cpu")
@@ -40,12 +50,14 @@ class MultiTaskPerceptionModel(nn.Module):
             if os.path.exists(unet_path):
                 u_weights = torch.load(unet_path, map_location="cpu")
                 self.unet.load_state_dict(u_weights.get("state_dict", u_weights), strict=False)
-        except Exception:
-            pass 
+
+        except Exception as e:
+            print(f"Warning: Could not fully load checkpoints. Error: {e}")
             
         self.unet.encoder = self.shared_encoder
 
     def forward(self, x: torch.Tensor):
+        """Forward pass for multi-task model."""
         bottleneck, features = self.shared_encoder(x, return_features=True)
         flat_features = torch.flatten(bottleneck, 1)
         
