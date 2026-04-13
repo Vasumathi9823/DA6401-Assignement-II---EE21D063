@@ -3,25 +3,22 @@
 import torch
 import torch.nn as nn
 from .vgg11 import VGG11Encoder
-from .layers import CustomDropout
 
 class VGG11Localizer(nn.Module):
     """VGG11-based localizer."""
 
-    def __init__(self, in_channels: int = 3, dropout_p: float = 0.5):
+    def __init__(self, in_channels: int = 3, dropout_p: float = 0.0):
         """Initialize the VGG11Localizer model."""
         super().__init__()
         
         self.encoder = VGG11Encoder(in_channels)
         
-        # TA APPROVED SHRUNK FC LAYERS for Regression
+        # TA APPROVED SHRUNK FC LAYERS - NO DROPOUT for precise regression
         self.regressor = nn.Sequential(
             nn.Linear(512 * 7 * 7, 512),
             nn.ReLU(inplace=True),
-            CustomDropout(p=dropout_p),
             nn.Linear(512, 128),
             nn.ReLU(inplace=True),
-            CustomDropout(p=dropout_p),
             # Final output is exactly 4 continuous values [cx, cy, w, h]
             nn.Linear(128, 4) 
         )
@@ -32,5 +29,5 @@ class VGG11Localizer(nn.Module):
         x = torch.flatten(x, 1)
         x = self.regressor(x)
         
-        # FIX: Force the 4 outputs to be strictly between 0 and 224 pixels!
-        return torch.sigmoid(x) * 224.0
+        # FIX: Force outputs to be strictly between 0.0 and 1.0
+        return torch.sigmoid(x)
