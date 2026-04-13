@@ -9,7 +9,6 @@ class VGG11Classifier(nn.Module):
         super().__init__()
         self.encoder = VGG11Encoder(in_channels, use_bn=use_bn)
         
-        # RESTORED TO 4096 FOR AUTOGRADER COMPLIANCE
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(inplace=True),
