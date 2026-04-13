@@ -147,7 +147,16 @@ def voc_to_cxcywh(bboxes):
     w = x2 - x1
     h = y2 - y1
     return torch.stack([cx, cy, w, h], dim=1)
-    
+
+def cxcywh_to_voc(bboxes):
+    """Converts [cx, cy, w, h] back to [x1, y1, x2, y2] for IoU calculation"""
+    cx, cy, w, h = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
+    x1 = cx - (w / 2.0)
+    y1 = cy - (h / 2.0)
+    x2 = cx + (w / 2.0)
+    y2 = cy + (h / 2.0)
+    return torch.stack([x1, y1, x2, y2], dim=1)
+
 # LOCALIZATION 
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task2_localization", config=vars(args))
@@ -167,20 +176,24 @@ def train_localization(args, device, train_loader, val_loader):
         train_loss = 0.0
 
         for batch in train_loader:
-            images, bboxes = batch['image'].to(device), batch['bbox'].to(device)
+            images, bboxes_xyxy = batch['image'].to(device), batch['bbox'].to(device)
             
-            # --- NEW: Convert coordinates so IoULoss calculates correctly ---
-            bboxes = voc_to_cxcywh(bboxes)
+            bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
             
             optimizer.zero_grad()
-            outputs = model(images)
+            outputs_cxcywh = model(images)
             
-            loss = criterion_reg(outputs, bboxes) + (10.0 * criterion_iou(outputs, bboxes))
+            # Convert predictions back to xyxy JUST for the IoU loss
+            outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
+            
+            # Calculate losses with correct formats!
+            l_reg = criterion_reg(outputs_cxcywh, bboxes_cxcywh)
+            l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy) 
+            
+            loss = l_reg + (10.0 * l_iou)
             loss.backward()
 
-            # --- NEW: Gradient Clipping ---
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            
             optimizer.step()
             train_loss += loss.item()
 
@@ -190,15 +203,15 @@ def train_localization(args, device, train_loader, val_loader):
         val_loss, val_iou_loss = 0.0, 0.0
         with torch.no_grad():
             for batch in val_loader:
-                images, bboxes = batch['image'].to(device), batch['bbox'].to(device)
+                images, bboxes_xyxy = batch['image'].to(device), batch['bbox'].to(device)
                 
-                # --- NEW: Convert validation coordinates too! ---
-                bboxes = voc_to_cxcywh(bboxes)
+                bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
+                outputs_cxcywh = model(images)
+                outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
                 
-                outputs = model(images)
+                l_reg = criterion_reg(outputs_cxcywh, bboxes_cxcywh)
+                l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy)
                 
-                l_reg = criterion_reg(outputs, bboxes)
-                l_iou = criterion_iou(outputs, bboxes)
                 val_loss += (l_reg + (10.0 * l_iou)).item()
                 val_iou_loss += l_iou.item()
         val_loss /= len(val_loader)
