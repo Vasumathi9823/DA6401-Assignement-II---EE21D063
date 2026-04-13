@@ -66,9 +66,7 @@ def get_dataloaders(root_dir: str, batch_size: int = 32):
 
     return train_loader, val_loader
 
-# ==========================================
-# HELPER FUNCTIONS FOR LOCALIZATION FORMATS
-# ==========================================
+
 def voc_to_cxcywh(bboxes):
     """Converts [x1, y1, x2, y2] to [cx, cy, w, h]"""
     x1, y1, x2, y2 = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
@@ -88,9 +86,7 @@ def cxcywh_to_voc(bboxes):
     return torch.stack([x1, y1, x2, y2], dim=1)
 
 
-# ==========================================
-# TASK 1: CLASSIFICATION
-# ==========================================
+# CLASSIFICATION
 def train_classifier(args, device, train_loader, val_loader):
     run_name = f"scratch_classifier_bn_{args.use_bn}_drop_{args.dropout}"
     wandb.init(project="DA6401_Assignment II", name=run_name, config=vars(args))
@@ -162,7 +158,6 @@ def train_classifier(args, device, train_loader, val_loader):
     wandb.finish()
 
 
-
 # LOCALIZATION
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task2_localization", config=vars(args))
@@ -183,20 +178,19 @@ def train_localization(args, device, train_loader, val_loader):
 
         for batch in train_loader:
             images = batch['image'].to(device)
-            # FIX: Normalize targets to [0.0, 1.0] by dividing by image size
-            bboxes_xyxy = batch['bbox'].to(device) / 224.0
-            
+            # FIX: DO NOT divide by 224.0. Keep absolute pixels!
+            bboxes_xyxy = batch['bbox'].to(device) 
             bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
             
             optimizer.zero_grad()
             outputs_cxcywh = model(images)
             outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
             
-            # Both losses are now naturally on the same [0, 1] scale!
             l_reg = criterion_reg(outputs_cxcywh, bboxes_cxcywh)
             l_iou = criterion_iou(outputs_xyxy, bboxes_xyxy) 
             
-            loss = l_reg + l_iou
+            # Multiply IoU by 50 so it scales with the pixel errors
+            loss = l_reg + (50.0 * l_iou)
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -210,7 +204,6 @@ def train_localization(args, device, train_loader, val_loader):
         with torch.no_grad():
             for batch in val_loader:
                 images = batch['image'].to(device)
-                # FIX: Normalize validation targets too
                 bboxes_xyxy = batch['bbox'].to(device) / 224.0
                 
                 bboxes_cxcywh = voc_to_cxcywh(bboxes_xyxy)
