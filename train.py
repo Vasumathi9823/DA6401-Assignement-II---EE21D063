@@ -201,7 +201,7 @@ def train_localization(args, device, train_loader, val_loader):
 
         model.eval()
         val_loss, val_iou_loss = 0.0, 0.0
-       with torch.no_grad():
+        with torch.no_grad():
             for batch in val_loader:
                 images = batch['image'].to(device)
                 # REMOVE the / 224.0 here too!
