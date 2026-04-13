@@ -239,16 +239,15 @@ def train_localization(args, device, train_loader, val_loader):
 
     wandb.finish()
 
-# ==========================================
-# TASK 3: SEGMENTATION
-# ==========================================
+# SEGMENTATION
 def train_segmentation(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="scratch_task3_segmentation", config=vars(args))
 
     model = VGG11UNet(num_classes=3, in_channels=3, dropout_p=args.dropout).to(device)
     model.apply(init_weights)
-    
-    criterion = nn.CrossEntropyLoss()
+    class_weights = torch.tensor([1.0, 0.2, 1.0]).to(device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    # criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
 
