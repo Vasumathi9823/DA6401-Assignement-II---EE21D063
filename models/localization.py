@@ -28,12 +28,9 @@ class VGG11Localizer(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass for localization model."""
-        # Extract features
         x = self.encoder(x, return_features=False)
-        
-        # Flatten spatial dimensions
         x = torch.flatten(x, 1)
-        
-        # Output coordinates
         x = self.regressor(x)
-        return x
+        
+        # FIX: Force the 4 outputs to be strictly between 0 and 224 pixels!
+        return torch.sigmoid(x) * 224.0
