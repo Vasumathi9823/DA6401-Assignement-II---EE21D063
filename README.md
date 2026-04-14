@@ -28,6 +28,7 @@ Comparing strategies revealed that **Full Fine-Tuning** outperforms Strict Featu
 ### 2.4 Feature Map Visualization: Edges to Semantics
 Analysis of the feature maps shows a clear transition: early layers act as localized edge and texture detectors, while deeper layers (Block 5) collapse spatial resolution into high-level semantic "heatmaps." These deep maps ignore background noise to focus exclusively on class-specific features like ears, snouts, and eyes.
 
+code snippet: https://github.com/Vasumathi9823/DA6401-Assignement-II---EE21D063/blob/main/Code_snippet_2.4_2.6_2.7.py
 
 ### 2.5 Object Detection: Confidence & IoU
 The model achieves high **Intersection over Union (IoU)** across the test set, though it struggles with low-contrast edge cases (e.g., dark pets against dark backgrounds). These failure cases highlight the model's reliance on clear boundary gradients for accurate coordinate regression.
@@ -39,8 +40,13 @@ $$Dice = \frac{2 \cdot |A \cap B|}{|A| + |B|}$$
 
 By using **Weighted Cross-Entropy**, penalized the background over-fitting and force the U-Net to focus on the minority "Pet" and "Border" classes.
 
+code snippet: https://github.com/Vasumathi9823/DA6401-Assignement-II---EE21D063/blob/main/Code_snippet_2.4_2.6_2.7.py
+
 ### 2.7 & 2.8 Meta-Analysis & Reflection
 The final pipeline demonstrates strong generalization to "in-the-wild" images. The synergy between the shared encoder and multi-task heads allows the model to balance semantic richness for classification with spatial precision for segmentation. The integration of **Batch Normalization, Strategic Dropout, and Class-Weighted Loss** forms the backbone of this robust vision system.
+
+code snippet: https://github.com/Vasumathi9823/DA6401-Assignement-II---EE21D063/blob/main/Code_snippet_2.4_2.6_2.7.py
+
 
 ---
 *All experiments were tracked and logged via Weights & Biases (W&B):*
