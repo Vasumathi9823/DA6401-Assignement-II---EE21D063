@@ -44,4 +44,4 @@ The final pipeline demonstrates strong generalization to "in-the-wild" images. T
 
 ---
 *All experiments were tracked and logged via Weights & Biases (W&B):*
-[**Vasumathi DA6401 Assignment 2 Report**](https://wandb.ai/ee21d063-iit-madras/DA6401_Assignment%20II/reports/Vasumathi_DA6401_Assignment2_Report--VmlldzoxNjUxMDc3OA)
+[**Vasumathi DA6401 Assignment 2 Report**](https://api.wandb.ai/links/ee21d063-iit-madras/3nzqtc5r)
