@@ -135,7 +135,21 @@ def train_classifier(args, device, train_loader, val_loader):
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="task2_localization", config=vars(args))
     model = VGG11Localizer(in_channels=3).to(device)
-    model.apply(init_weights) 
+
+    # 1. Initialize only the new task-specific head
+    model.regressor.apply(init_weights) 
+    
+    # 2. Load the trained backbone from Task 1
+    checkpoint = torch.load("checkpoints/classifier.pth", map_location=device)
+    
+    # Extract only the encoder weights from the checkpoint dictionary
+    encoder_weights = {k.replace('encoder.', ''): v for k, v in checkpoint['state_dict'].items() if 'encoder' in k}
+    model.encoder.load_state_dict(encoder_weights, strict=True)
+    
+    # Now, if you are freezing the backbone (as per your args.freeze_mode):
+    if args.freeze_mode == "frozen":
+        for param in model.encoder.parameters():
+            param.requires_grad = False
     
     criterion_reg = nn.SmoothL1Loss(); criterion_iou = IoULoss(reduction="none")
     # Use a much smaller learning rate (1e-5 instead of 5e-5)
