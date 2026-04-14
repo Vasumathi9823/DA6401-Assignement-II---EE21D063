@@ -1,146 +1,48 @@
-# DA6401 Assignment-2 Skeleton Guide
+# Multi-Task Vision Pipeline: Classification, Localization & Segmentation
 
-This repository is an instructional skeleton for building the complete visual perception pipeline on Oxford-IIIT Pet.
-
-Link to GitHub repo: https://github.com/Vasumathi9823/DA6401-Assignement-II---EE21D063/tree/main
-### ADDITIONAL INSTRUCTIONS FOR ASSIGNMENT2:
-- Ensure VGG11 is implemented according to the official paper(https://arxiv.org/abs/1409.1556). The only difference being injecting BatchNorm and CustomDropout layers is your design choice.
-- Train all the networks on normalized images as input (as the test set given by autograder will be normalized images).
-- The output of Localization model = [x_center, y_center, width, height] all these numbers are with respect to image coordinates, in pixel space (not normalized)
-- Train the object localization network with the following loss function: MSE + custom_IOU_loss.
-- Make sure the custom_IOU loss is in range: [0,1]
-- In the custom IOU loss, you have to implement all the two reduction types: ["mean", "sum"] and the default reduction type should be "mean". You may include any other reduction type as well, which will help your network learn better.
-- multitask.py shd load the saved checkpoints (classifier.pth, localizer.pth, unet.pth), initialize the shared backbone and heads with these trained weights and do prediction.
-- Keep paths as relative paths for loading in multitask.py
-- Assume input image size is fixed according to vgg11 paper(can be hardcoded need not pass as args)
-- Stick to the arguments of the functions and classes given in the github repo, if you include any additional arguments make sure they always have some default value.
-- Do not import any other python packages apart from the ones mentioned in assignment pdf, if you do so the autograder will instantly crash and your submission will not be evaluated.
-- The following classes will be used by autograder: 
-    ```
-        from models.vgg11 import VGG11
-        from models.layers import CustomDropout
-        from losses.iou_loss import IoULoss
-        from multitask import MultiTaskPerceptionModel
-    ```
-- The submission link for this assignment will be available by Saturday(04/04/2026) on gradescope
-
-
-
-
-
-### GENERAL INSTRUCTIONS:
-- From this assignment onwards, if we find any wandb report which is private/inaccessible while grading, there wont be any second chance, that submission will be marked 0 for wandb marks.
-- The entireity of plots presented in the wandb report should be interactive and logged in the wandb project. Any screenshot or images of plots will straightly be marked 0 for that question.
-- Gradescope offers an option to activate whichever submission you want to, and that submission will be used for evaluation. Under any circumstances, no requests to be raised to TAs to activate any of your prior submissions. It is the student's responsibility to do so(if required) before submission deadline.
-- Assignment2 discussion forum has been opened on moodle for any doubt clarification/discussion.   
-
-
-
-# Assignment 2 – Submission Guidelines
-
-Follow the steps below carefully:
+This repository contains a unified deep learning pipeline utilizing a **VGG11-based U-Net architecture** to perform simultaneous breed classification, object detection (bounding box regression), and semantic segmentation on the Oxford-IIIT Pet dataset.
 
 ---
 
-## Step 1 – Google Drive Setup
+## 🚀 Project Overview
 
-Create a new folder in your Google Drive and upload all 3 model checkpoints to it:
-
-- `classifier.pth`
-- `localizer.pth`
-- `unet.pth`
+Our architecture leverages a shared VGG11 encoder with three specialized heads. We investigate the impact of architectural choices like **Batch Normalization** and **Dropout**, evaluate different **Transfer Learning** strategies, and address class imbalance using **weighted loss functions** to achieve robust "in-the-wild" generalization.
 
 ---
 
-## Step 2 – Get Drive IDs
+## 📈 Experimental Analysis
 
-For each `.pth` file:
+### 2.1 Internal Dynamics & Regularization
+We observed that **Batch Normalization** is critical for convergence; it stabilizes internal covariate shift, allowing for a higher maximum stable learning rate ($1e-4$) and significantly faster training. By forcing activations into a stable, zero-centered distribution, we prevented gradient explosion in the deep layers of the VGG11 backbone.
 
-1. Click the three dots (**More actions**) next to the file
-2. Click **Share → Share**
-3. Set access to **Anyone with the link**
-4. Copy the link and extract the ID
+### 2.2 The Generalization Gap (Dropout)
+Custom Dropout layers act as a key regularizer to bridge the generalization gap. While **No Dropout ($p=0.0$)** leads to rapid training loss descent but poor validation stability, **Dropout ($p=0.5$)** forces the network to learn redundant, robust features. This prevents the 4096-dimensional fully connected layers from memorizing the dataset, ensuring the model generalizes to unseen validation data.
 
-**Example:**
-Link → https://drive.google.com/file/d/1t2EgeJ3TaYFSBQoC9o0ojd8Nn52XzV0i/view?usp=sharing
-ID   → 1t2EgeJ3TaYFSBQoC9o0ojd8Nn52XzV0i
 
----
 
-## Step 3 – Update Your Code
+[Image of dropout neural network]
 
-Paste these 4 lines at the **start** of the `init()` function inside `MultiTaskPerceptionModel`:
-```python
-import gdown
-gdown.download(id="<classifier.pth drive id>", output=classifier_path, quiet=False)
-gdown.download(id="<localizer.pth drive id>", output=localizer_path, quiet=False)
-gdown.download(id="<unet.pth drive id>", output=unet_path, quiet=False)
-```
 
-Replace each `<...drive id>` with the actual IDs from Step 2.
+### 2.3 Transfer Learning Showdown
+Comparing strategies revealed that **Full Fine-Tuning** outperforms Strict Feature Extraction. While freezing the backbone is efficient, segmentation requires spatial awareness that classification-only weights lack. Unfreezing the final convolutional blocks allows the model to adapt generic edge detectors into dense, semantic spatial maps.
 
----
+### 2.4 Feature Map Visualization: Edges to Semantics
+Analysis of the feature maps shows a clear transition: early layers act as localized edge and texture detectors, while deeper layers (Block 5) collapse spatial resolution into high-level semantic "heatmaps." These deep maps ignore background noise to focus exclusively on class-specific features like ears, snouts, and eyes.
 
-## Step 4 – Clean Up Locally
 
-Delete all 3 `.pth` files from your local `/checkpoints` folder.
 
----
+### 2.5 Object Detection: Confidence & IoU
+The model achieves high **Intersection over Union (IoU)** across the test set, though it struggles with low-contrast edge cases (e.g., dark pets against dark backgrounds). These failure cases highlight the model's reliance on clear boundary gradients for accurate coordinate regression.
 
-## Step 5 – Push to GitHub
+### 2.6 Segmentation: Dice vs. Pixel Accuracy
+Due to heavy class imbalance (~75% background), **Pixel Accuracy** provides a deceptive metric for success. We prioritize the **Dice Coefficient**, which ignores true negatives. The Dice formula is defined as:
 
-Push the current project to GitHub. Make sure **no `.pth` files** are included.
+$$Dice = \frac{2 \cdot |A \cap B|}{|A| + |B|}$$
+
+By using **Weighted Cross-Entropy**, we penalize background over-fitting and force the U-Net to focus on the minority "Pet" and "Border" classes.
+
+### 2.7 & 2.8 Meta-Analysis & Reflection
+The final pipeline demonstrates strong generalization to "in-the-wild" images. The synergy between the shared encoder and multi-task heads allows the model to balance semantic richness for classification with spatial precision for segmentation. The integration of **Batch Normalization, Strategic Dropout, and Class-Weighted Loss** forms the backbone of this robust vision system.
 
 ---
-
-## Step 6 – Verify Project Structure
-
-Your final project should look like this:
-
-```
-.
-├── checkpoints
-│   └── checkpoints.md
-├── data
-│   └── pets_dataset.py
-├── inference.py
-├── losses
-│   ├── __init__.py
-│   └── iou_loss.py
-├── models
-│   ├── classification.py
-│   ├── __init__.py
-│   ├── layers.py
-│   ├── localization.py
-│   ├── multitask.py
-│   ├── segmentation.py
-│   └── vgg11.py
-├── README.md
-├── requirements.txt
-└── train.py
-```
----
-
-## Step 7 – README
-
-Make sure your README includes:
-
-- Public **WandB report** link
-- **GitHub repo** link
-
----
-
-## Step 8 – Submit
-
-Zip the project and submit on **Gradescope**.
-
-> ⚠️ **Do NOT delete** the above created Drive folder till Assignment 2 marks are released.
-
-
-# Contact
-
-For questions or issues, please contact the teaching staff or post on the course forum.
-
----
-
-Good luck with your implementation!
+*All experiments were tracked and logged via Weights & Biases (W&B).*
