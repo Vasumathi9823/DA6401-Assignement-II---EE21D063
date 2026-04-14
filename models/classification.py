@@ -9,14 +9,15 @@ class VGG11Classifier(nn.Module):
         super().__init__()
         self.encoder = VGG11Encoder(in_channels, use_bn=use_bn)
         
+        # In classification.py
         self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
+            nn.Linear(512 * 7 * 7, 512), # Drastically reduced from 4096
             nn.ReLU(inplace=True),
             CustomDropout(p=dropout_p),
-            nn.Linear(4096, 4096),
+            nn.Linear(512, 128),         # Reduced from 4096
             nn.ReLU(inplace=True),
             CustomDropout(p=dropout_p),
-            nn.Linear(4096, num_classes)
+            nn.Linear(128, num_classes)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
