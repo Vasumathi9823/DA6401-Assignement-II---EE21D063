@@ -4,8 +4,6 @@ import torch
 import torch.nn as nn
 
 class CustomDropout(nn.Module):
-    """Custom Dropout layer using inverted dropout."""
-
     def __init__(self, p: float = 0.5):
       
         super().__init__()
