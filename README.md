@@ -4,13 +4,13 @@ This repository contains a unified deep learning pipeline utilizing a **VGG11-ba
 
 ---
 
-## 🚀 Project Overview
+##  Project Overview
 
 Our architecture leverages a shared VGG11 encoder with three specialized heads. We investigate the impact of architectural choices like **Batch Normalization** and **Dropout**, evaluate different **Transfer Learning** strategies, and address class imbalance using **weighted loss functions** to achieve robust "in-the-wild" generalization.
 
 ---
 
-## 📈 Experimental Analysis
+##  Experimental Analysis
 
 ### 2.1 Internal Dynamics & Regularization
 We observed that **Batch Normalization** is critical for convergence; it stabilizes internal covariate shift, allowing for a higher maximum stable learning rate ($1e-4$) and significantly faster training. By forcing activations into a stable, zero-centered distribution, we prevented gradient explosion in the deep layers of the VGG11 backbone.
@@ -45,4 +45,5 @@ By using **Weighted Cross-Entropy**, we penalize background over-fitting and for
 The final pipeline demonstrates strong generalization to "in-the-wild" images. The synergy between the shared encoder and multi-task heads allows the model to balance semantic richness for classification with spatial precision for segmentation. The integration of **Batch Normalization, Strategic Dropout, and Class-Weighted Loss** forms the backbone of this robust vision system.
 
 ---
-*All experiments were tracked and logged via Weights & Biases (W&B).*
+*All experiments were tracked and logged via Weights & Biases (W&B):*
+[**Vasumathi DA6401 Assignment 2 Report**](https://wandb.ai/ee21d063-iit-madras/DA6401_Assignment%20II/reports/Vasumathi_DA6401_Assignment2_Report--VmlldzoxNjUxMDc3OA)
