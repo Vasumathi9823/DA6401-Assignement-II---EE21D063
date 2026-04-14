@@ -48,7 +48,6 @@ class MultiTaskPerceptionModel(nn.Module):
     def forward(self, x: torch.Tensor):
         """Clean execution protecting BatchNorm statistics."""
         
-        # FORCE EVAL MODE: Protects BN running stats from being corrupted by the test set
         self.classifier_model.eval()
         self.localizer_model.eval()
         self.unet_model.eval()
