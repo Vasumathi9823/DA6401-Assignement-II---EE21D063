@@ -1,6 +1,7 @@
 # Multi-Task Vision Pipeline: Classification, Localization & Segmentation
 
 This repository contains a unified deep learning pipeline utilizing a **VGG11-based U-Net architecture** to perform simultaneous breed classification, object detection (bounding box regression), and semantic segmentation on the Oxford-IIIT Pet dataset.
+
 GitHub Repo link: https://github.com/Vasumathi9823/DA6401-Assignement-II---EE21D063/tree/main
 
 ---
