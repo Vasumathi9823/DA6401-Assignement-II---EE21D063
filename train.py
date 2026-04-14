@@ -135,34 +135,12 @@ def train_classifier(args, device, train_loader, val_loader):
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="task2_localization", config=vars(args))
     model = VGG11Localizer(in_channels=3).to(device)
-    model.regressor.apply(init_weights) 
+    model.apply(init_weights) 
     
-    checkpoint = torch.load("checkpoints/classifier.pth", map_location=device)
-    
-    encoder_weights = {k.replace('encoder.', ''): v for k, v in checkpoint['state_dict'].items() if 'encoder' in k}
-    model.encoder.load_state_dict(encoder_weights, strict=True)
-    
-    if args.freeze_mode == "frozen":
-        for param in model.encoder.parameters():
-            param.requires_grad = False
-    
-    criterion_reg = nn.SmoothL1Loss()
-    criterion_iou = IoULoss(reduction="none")
+    criterion_reg = nn.SmoothL1Loss(); criterion_iou = IoULoss(reduction="none")
+    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-4)
 
-    if args.freeze_mode == "frozen":
-        optimizer = optim.Adam(model.regressor.parameters(), lr=1e-3, weight_decay=1e-4)
-    elif args.freeze_mode == "partial":
-        optimizer = optim.Adam([
-            {'params': filter(lambda p: p.requires_grad, model.encoder.parameters()), 'lr': 1e-5},
-            {'params': model.regressor.parameters(), 'lr': 1e-3} # 100x larger LR for the random head
-        ], weight_decay=1e-4)
-    else:
-        optimizer = optim.Adam([
-            {'params': model.encoder.parameters(), 'lr': 1e-5},
-            {'params': model.regressor.parameters(), 'lr': 1e-3}
-        ], weight_decay=1e-4)
-
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=10)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=15)
     best_iou = 0.0; epochs_no_improve = 0
 
     for epoch in range(args.epochs):
@@ -176,7 +154,7 @@ def train_localization(args, device, train_loader, val_loader):
             outputs_cxcywh = model(images)
             outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
             
-            loss = criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * criterion_iou(outputs_cxcywh, bboxes_cxcywh).mean())
+            loss = criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * criterion_iou(outputs_xyxy, bboxes_xyxy).mean())
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -192,12 +170,11 @@ def train_localization(args, device, train_loader, val_loader):
                 outputs_cxcywh = model(images)
                 outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
                 
-                l_iou_batch = criterion_iou(outputs_cxcywh, bboxes_cxcywh)
+                l_iou_batch = criterion_iou(outputs_xyxy, bboxes_xyxy)
                 l_iou = l_iou_batch.mean()
                 val_loss += (criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * l_iou)).item()
                 val_iou_loss += l_iou.item()
 
-                # W&B SECTION 2.5: Log 10 Bounding Box images on the first batch of validation
                 if batch_idx == 0:
                     ious_scores = 1.0 - l_iou_batch
                     wandb.log({"Localization_Edge_Cases": draw_bboxes_wandb(images, outputs_xyxy, bboxes_xyxy, ious_scores)}, commit=False)
@@ -213,21 +190,13 @@ def train_localization(args, device, train_loader, val_loader):
 
     wandb.finish()
 
-# SEGMENTATION ===
+# 3: SEGMENTATION 
 def train_segmentation(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name=f"task3_segmentation_{args.freeze_mode}", config=vars(args))
     model = VGG11UNet(num_classes=3, in_channels=3, dropout_p=args.dropout).to(device)
-    model.up5.apply(init_weights); model.dec5.apply(init_weights)
-    model.up4.apply(init_weights); model.dec4.apply(init_weights)
-    model.up3.apply(init_weights); model.dec3.apply(init_weights)
-    model.up2.apply(init_weights); model.dec2.apply(init_weights)
-    model.up1.apply(init_weights); model.dec1.apply(init_weights)
-    model.final_conv.apply(init_weights)
+    model.apply(init_weights)
 
-    checkpoint = torch.load("checkpoints/classifier.pth", map_location=device)
-    encoder_weights = {k.replace('encoder.', ''): v for k, v in checkpoint['state_dict'].items() if 'encoder' in k}
-    model.encoder.load_state_dict(encoder_weights, strict=True)
-
+    # Transfer Learning Freeze Modes
     if args.freeze_mode == "frozen":
         for param in model.encoder.parameters():
             param.requires_grad = False
@@ -261,7 +230,7 @@ def train_segmentation(args, device, train_loader, val_loader):
                 val_loss += criterion(outputs, masks).item()
 
                 preds = torch.argmax(outputs, dim=1)
-                
+                 #  Pixel Accuracy Calculation
                 pixel_acc += (preds == masks).sum().float().item() / masks.numel()
 
                 for c in range(3):
