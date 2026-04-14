@@ -151,12 +151,26 @@ def train_localization(args, device, train_loader, val_loader):
         for param in model.encoder.parameters():
             param.requires_grad = False
     
-    criterion_reg = nn.SmoothL1Loss(); criterion_iou = IoULoss(reduction="none")
-    # Use a much smaller learning rate (1e-5 instead of 5e-5)
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-4)
+    criterion_reg = nn.SmoothL1Loss()
+    criterion_iou = IoULoss(reduction="none")
 
-    # Increase patience from 5 to 15 so it doesn't drop the LR prematurely
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=15)
+    # The Magic Fix: Differential Learning Rates
+    if args.freeze_mode == "frozen":
+        # Only pass the unfrozen regressor parameters to the optimizer
+        optimizer = optim.Adam(model.regressor.parameters(), lr=1e-3, weight_decay=1e-4)
+    elif args.freeze_mode == "partial":
+        optimizer = optim.Adam([
+            {'params': filter(lambda p: p.requires_grad, model.encoder.parameters()), 'lr': 1e-5},
+            {'params': model.regressor.parameters(), 'lr': 1e-3} # 100x larger LR for the random head
+        ], weight_decay=1e-4)
+    else:
+        optimizer = optim.Adam([
+            {'params': model.encoder.parameters(), 'lr': 1e-5},
+            {'params': model.regressor.parameters(), 'lr': 1e-3}
+        ], weight_decay=1e-4)
+
+    # Note: Keep the patience slightly higher (e.g., 10) since bbox regression takes time to stabilize
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=10)
     best_iou = 0.0; epochs_no_improve = 0
 
     for epoch in range(args.epochs):
