@@ -13,7 +13,6 @@ class VGG11UNet(nn.Module):
         
         self.encoder = VGG11Encoder(in_channels)
         
-        # Helper function for symmetric decoder blocks
         def dec_block(in_c, out_c):
             return nn.Sequential(
                 nn.Conv2d(in_c, out_c, kernel_size=3, padding=1),
@@ -24,8 +23,7 @@ class VGG11UNet(nn.Module):
                 nn.ReLU(inplace=True)
             )
 
-        # Transposed Convolutions and Decoder Blocks
-        # Adjusted input channels to perfectly match VGG11 feature map concatenations
+       
         self.up5 = nn.ConvTranspose2d(512, 512, kernel_size=2, stride=2)
         self.dec5 = dec_block(1024, 512) # 512 (up) + 512 (pool5_pre)
         
@@ -41,7 +39,6 @@ class VGG11UNet(nn.Module):
         self.up1 = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2)
         self.dec1 = dec_block(128, 64)   # 64 (up) + 64 (pool1_pre)
         
-        # Final 1x1 Convolution
         self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
