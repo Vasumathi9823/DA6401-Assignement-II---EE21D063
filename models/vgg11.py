@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 
 class VGG11(nn.Module):
-    """Standard VGG11 topology wrapper for the autograder."""
     def __init__(self, in_channels: int = 3, num_classes: int = 1000):
         super().__init__()
         self.encoder = VGG11Encoder(in_channels=in_channels, use_bn=False)
@@ -24,7 +23,6 @@ class VGG11(nn.Module):
         return self.classifier(x)
 
 class VGG11Encoder(nn.Module):
-    """VGG11-style encoder with optional intermediate feature returns."""
     def __init__(self, in_channels: int = 3, use_bn: bool = True):
         super().__init__()
         
