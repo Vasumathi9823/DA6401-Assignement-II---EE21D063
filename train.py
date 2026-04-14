@@ -213,7 +213,18 @@ def train_localization(args, device, train_loader, val_loader):
 def train_segmentation(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name=f"task3_segmentation_{args.freeze_mode}", config=vars(args))
     model = VGG11UNet(num_classes=3, in_channels=3, dropout_p=args.dropout).to(device)
-    model.apply(init_weights)
+    # 1. Initialize the UNet components (decoder and final conv)
+    model.up5.apply(init_weights); model.dec5.apply(init_weights)
+    model.up4.apply(init_weights); model.dec4.apply(init_weights)
+    model.up3.apply(init_weights); model.dec3.apply(init_weights)
+    model.up2.apply(init_weights); model.dec2.apply(init_weights)
+    model.up1.apply(init_weights); model.dec1.apply(init_weights)
+    model.final_conv.apply(init_weights)
+
+    # 2. Load the trained backbone from Task 1
+    checkpoint = torch.load("checkpoints/classifier.pth", map_location=device)
+    encoder_weights = {k.replace('encoder.', ''): v for k, v in checkpoint['state_dict'].items() if 'encoder' in k}
+    model.encoder.load_state_dict(encoder_weights, strict=True)
 
     # W&B SECTION 2.3: Transfer Learning Freeze Modes
     if args.freeze_mode == "frozen":
