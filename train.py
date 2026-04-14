@@ -82,7 +82,7 @@ def draw_bboxes_wandb(images, pred_boxes, target_boxes, ious):
         }))
     return wandb_images
 
-# === TASK 1: CLASSIFICATION ===
+#  1: CLASSIFICATION 
 def train_classifier(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name=f"classifier_bn_{args.use_bn}_drop_{args.dropout}", config=vars(args))
     model = VGG11Classifier(num_classes=37, dropout_p=args.dropout, use_bn=args.use_bn).to(device)
@@ -131,11 +131,10 @@ def train_classifier(args, device, train_loader, val_loader):
             if epochs_no_improve >= 15: break
     wandb.finish()
 
-# OCALIZATION ===
+# 2: LOCALIZATION 
 def train_localization(args, device, train_loader, val_loader):
     wandb.init(project="DA6401_Assignment II", name="task2_localization", config=vars(args))
     model = VGG11Localizer(in_channels=3).to(device)
-
     model.regressor.apply(init_weights) 
     
     checkpoint = torch.load("checkpoints/classifier.pth", map_location=device)
@@ -151,7 +150,6 @@ def train_localization(args, device, train_loader, val_loader):
     criterion_iou = IoULoss(reduction="none")
 
     if args.freeze_mode == "frozen":
-        # Only pass the unfrozen regressor parameters to the optimizer
         optimizer = optim.Adam(model.regressor.parameters(), lr=1e-3, weight_decay=1e-4)
     elif args.freeze_mode == "partial":
         optimizer = optim.Adam([
