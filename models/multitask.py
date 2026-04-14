@@ -42,45 +42,45 @@ class MultiTaskPerceptionModel(nn.Module):
         safe_load(self.unet_model, unet_path)
 
     def forward(self, x: torch.Tensor):
-    # FORCE EVAL MODE: Protects BN running stats
-    self.eval() 
-    
-    # ONE shared forward pass!
-    bottleneck, features = self.shared_encoder(x, return_features=True)
-    flat_bottleneck = torch.flatten(bottleneck, 1)
-    
-    # 1. Classification Branch
-    class_logits = self.classifier_head(flat_bottleneck)
-    
-    # 2. Localization Branch (Manually applying the logic from your localization.py forward method)
-    loc_logits = self.localizer_head(flat_bottleneck)
-    loc_preds = torch.sigmoid(loc_logits) * 224.0
-    
-    # 3. Segmentation Branch (Executing the U-Net expansive path using the shared features)
-    d5 = self.unet.up5(bottleneck)
-    d5 = torch.cat([d5, features['pool5_pre']], dim=1)
-    d5 = self.unet.dec5(d5)
-    
-    d4 = self.unet.up4(d5)
-    d4 = torch.cat([d4, features['pool4_pre']], dim=1)
-    d4 = self.unet.dec4(d4)
-    
-    d3 = self.unet.up3(d4)
-    d3 = torch.cat([d3, features['pool3_pre']], dim=1)
-    d3 = self.unet.dec3(d3)
-    
-    d2 = self.unet.up2(d3)
-    d2 = torch.cat([d2, features['pool2_pre']], dim=1)
-    d2 = self.unet.dec2(d2)
-    
-    d1 = self.unet.up1(d2)
-    d1 = torch.cat([d1, features['pool1_pre']], dim=1)
-    d1 = self.unet.dec1(d1)
-    
-    seg_logits = self.unet.final_conv(d1)
-    
-    return {
-        'classification': class_logits,
-        'localization': loc_preds,
-        'segmentation': seg_logits
-    }
+        # FORCE EVAL MODE: Protects BN running stats
+        self.eval() 
+        
+        # ONE shared forward pass!
+        bottleneck, features = self.shared_encoder(x, return_features=True)
+        flat_bottleneck = torch.flatten(bottleneck, 1)
+        
+        # 1. Classification Branch
+        class_logits = self.classifier_head(flat_bottleneck)
+        
+        # 2. Localization Branch (Manually applying the logic from your localization.py forward method)
+        loc_logits = self.localizer_head(flat_bottleneck)
+        loc_preds = torch.sigmoid(loc_logits) * 224.0
+        
+        # 3. Segmentation Branch (Executing the U-Net expansive path using the shared features)
+        d5 = self.unet.up5(bottleneck)
+        d5 = torch.cat([d5, features['pool5_pre']], dim=1)
+        d5 = self.unet.dec5(d5)
+        
+        d4 = self.unet.up4(d5)
+        d4 = torch.cat([d4, features['pool4_pre']], dim=1)
+        d4 = self.unet.dec4(d4)
+        
+        d3 = self.unet.up3(d4)
+        d3 = torch.cat([d3, features['pool3_pre']], dim=1)
+        d3 = self.unet.dec3(d3)
+        
+        d2 = self.unet.up2(d3)
+        d2 = torch.cat([d2, features['pool2_pre']], dim=1)
+        d2 = self.unet.dec2(d2)
+        
+        d1 = self.unet.up1(d2)
+        d1 = torch.cat([d1, features['pool1_pre']], dim=1)
+        d1 = self.unet.dec1(d1)
+        
+        seg_logits = self.unet.final_conv(d1)
+        
+        return {
+            'classification': class_logits,
+            'localization': loc_preds,
+            'segmentation': seg_logits
+        }
