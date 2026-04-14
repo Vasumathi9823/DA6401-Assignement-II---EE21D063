@@ -184,7 +184,7 @@ def train_localization(args, device, train_loader, val_loader):
             outputs_cxcywh = model(images)
             outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
             
-            loss = criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * criterion_iou(outputs_xyxy, bboxes_xyxy).mean())
+            loss = criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * criterion_iou(outputs_cxcywh, bboxes_cxcywh).mean())
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -200,7 +200,7 @@ def train_localization(args, device, train_loader, val_loader):
                 outputs_cxcywh = model(images)
                 outputs_xyxy = cxcywh_to_voc(outputs_cxcywh)
                 
-                l_iou_batch = criterion_iou(outputs_xyxy, bboxes_xyxy)
+                l_iou_batch = criterion_iou(outputs_cxcywh, bboxes_cxcywh)
                 l_iou = l_iou_batch.mean()
                 val_loss += (criterion_reg(outputs_cxcywh, bboxes_cxcywh) + (50.0 * l_iou)).item()
                 val_iou_loss += l_iou.item()
