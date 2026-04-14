@@ -56,7 +56,7 @@ class MultiTaskPerceptionModel(nn.Module):
         # 1. Classification
         class_logits = self.classifier_model(x)
         
-        # 2. Localization (with safeguard for absolute pixels)
+        # 2. Localization 
         loc_preds = self.localizer_model(x)
         if loc_preds.max() <= 2.0:
             loc_preds = loc_preds * 224.0
