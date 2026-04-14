@@ -20,10 +20,6 @@ class MultiTaskPerceptionModel(nn.Module):
             gdown.download(id="1ivEz9MUVvOmpnQcLvptUvVCxdlN9t3kW", output=classifier_path, quiet=False)
             gdown.download(id="1Y4UhcF-Ca1E6USDBiF0ml_rXoSlu4euT", output=localizer_path, quiet=False)
             gdown.download(id="1Fey2uAJr-N_878XagY-fKWqCXtPA5lC6", output=unet_path, quiet=False)
-                     
-            # gdown.download(id="16MJTJQPXdTv1FJKlU9l-KiqGgRZdfPwP", output=classifier_path, quiet=False)
-            # gdown.download(id="1hZsUKQIxvWwmhlvbpfNFfHcuZW8u76Ac", output=localizer_path, quiet=False)
-            # gdown.download(id="1HOfRw2GL8t0S1DEFyNuKUfYvGMWpJdUg", output=unet_path, quiet=False)
         except Exception:
             pass 
         
