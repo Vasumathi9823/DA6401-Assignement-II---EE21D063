@@ -1,4 +1,4 @@
-# Multi-Task Vision Pipeline: Classification, Localization & Segmentation
+# Visual Perception Pipeline: Classification, Localization & Segmentation - Pet Dataset ( Oxford-IIIT Pet Dataset )
 
 This repository contains a unified deep learning pipeline utilizing a **VGG11-based U-Net architecture** to perform simultaneous breed classification, object detection (bounding box regression), and semantic segmentation on the Oxford-IIIT Pet dataset.
 
