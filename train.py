@@ -138,8 +138,11 @@ def train_localization(args, device, train_loader, val_loader):
     model.apply(init_weights) 
     
     criterion_reg = nn.SmoothL1Loss(); criterion_iou = IoULoss(reduction="none")
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
+    # Use a much smaller learning rate (1e-5 instead of 5e-5)
+    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-4)
+
+    # Increase patience from 5 to 15 so it doesn't drop the LR prematurely
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=15)
     best_iou = 0.0; epochs_no_improve = 0
 
     for epoch in range(args.epochs):
@@ -187,9 +190,9 @@ def train_localization(args, device, train_loader, val_loader):
         if avg_val_iou > best_iou:
             best_iou = avg_val_iou; epochs_no_improve = 0
             torch.save({"state_dict": model.state_dict()}, "checkpoints/localizer.pth")
-        else:
-            epochs_no_improve += 1
-            if epochs_no_improve >= 15: break
+        # else:
+        #     epochs_no_improve += 1
+        #     if epochs_no_improve >= 15: break
     wandb.finish()
 
 # === TASK 3: SEGMENTATION ===
